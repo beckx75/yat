@@ -4,14 +4,20 @@ import(
 	"fmt"
 	"os"
 	"encoding/binary"
-	//	"golang.org/x/text/encoding/unicode"
+	"unicode/utf16"
+)
+
+type TagType string
+const (
+	ttID3 TagType = "ID3"
+	ttVorbisComment = "VorbisComment"
 )
 
 type TagEnc byte
 const (
-	ISO8152 TagEnc = 0x00
-	UTF16 = 0x01
-	UTF8 = 0x02
+	teISO8152 TagEnc = 0x00
+	teUTF16 = 0x01
+	teUTF8 = 0x02
 )
 
 const(
@@ -21,6 +27,8 @@ const(
 
 type AudioMetadata struct {
 	Filepath string
+	TagType TagType
+	TagVersion string
 	TextTags []TextTag
 }
 
@@ -51,23 +59,35 @@ func NewAudioAudiometadata(fp string) (*AudioMetadata, error) {
 
 	switch tagtype {
 	case "ID3":
+		amd.TagType = ttID3
+		var id3tagVersionMajor uint8 = 2
+		var id3tagVersionMinor uint8 = 0
+ 		var id3tagVersionResvision uint8 = 0
+		
 		fmt.Println("found ID3-Tag")
-		var id3v2Version uint8
-		err = binary.Read(file, binary.LittleEndian, &id3v2Version)
+		err = binary.Read(file, binary.LittleEndian, &id3tagVersionMinor)
 		if err != nil {
 			return nil, err
 		}
-		if id3v2Version == 2 {
-			fmt.Println("not implemented yet...")
-		} else if id3v2Version == 3 {
+		err = binary.Read(file, binary.LittleEndian, &id3tagVersionResvision)
+		if err != nil {
+			return nil, err
+		}
+		switch id3tagVersionMinor{
+			case 2:
+			fmt.Println("ID3v2.2 not implemented yet...")
+			return nil, nil
+			case 3:
+			fmt.Printf("found Id3v%d.%d.%d Audio-Metadata...\n",
+				id3tagVersionMajor, id3tagVersionMinor, id3tagVersionResvision)
 			err = parseID3v23(file)
 			if err != nil {
 				return nil, err
 			}
-		} else if id3v2Version == 4 {
-			fmt.Println("not implemented yet...")
-		} else {
-			return nil, fmt.Errorf("malformed ID3v2-Tag Entry... unknown Version %02d", id3v2Version)
+			case 4:
+			fmt.Println("ID3v2.4 not implemented yet...")
+			default:
+			return nil, fmt.Errorf("unsupported ID3v2-Minor Version: %d", id3tagVersionMinor)
 		}
 	default:
 		fmt.Printf("unsupported Tag-Type %s\n", tagtype)
@@ -79,13 +99,6 @@ func NewAudioAudiometadata(fp string) (*AudioMetadata, error) {
 func parseID3v23(file *os.File) error {
 	var b byte
 	var err error
-	err = binary.Read(file, binary.LittleEndian, &b)
-	if err != nil {
-		return err
-	}
-	if b != 0 {
-		return fmt.Errorf("malformated ID3v2.3-Tag Entry...")
-	}
 	// ID3v2 flags             %abc00000
 	var flagsByte byte
 	err = binary.Read(file, binary.LittleEndian, &flagsByte)
@@ -121,37 +134,60 @@ func parseID3v23(file *os.File) error {
 	if err != nil {
 		return err
 	}
-	frameSize = frameSize - ID3V23_FRAEMHEADER_SIZE
-	fmt.Println(frameSize)
+	// frameSize = frameSize - ID3V23_FRAEMHEADER_SIZE
+	fmt.Printf("Framesize: %d\n", frameSize)
 	
 	var frameFlags uint16
 	err = binary.Read(file, binary.BigEndian, &frameFlags)
 	if err != nil {
 		return err
 	}
-	var frameDatabytes []byte
-	var i uint32
-	for i=0;i<frameSize;i++ {
-		err = binary.Read(file, binary.BigEndian, &b)
+	// var frameDatabytes []byte
+	// var i uint32
+	// for i=0;i<frameSize;i++ {
+	// 	err = binary.Read(file, binary.BigEndian, &b)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	frameDatabytes = append(frameDatabytes, b)
+	// }
+	switch frameId {
+	case "TIT2":
+		var encoding byte
+		err = binary.Read(file, binary.BigEndian, &encoding)
 		if err != nil {
 			return err
 		}
-		frameDatabytes = append(frameDatabytes, b)
-	}
-	switch frameId {
-	case "TIT2":
-		encoding := frameDatabytes[0]
 		fmt.Printf("encoding: 0x%02x\n", encoding)
-		if encoding == UTF16 {
-			bom := bytesToUint16BE(frameDatabytes[1:3])
+		if encoding == teUTF16 {
+			var bom uint16
+			err = binary.Read(file, binary.BigEndian, &bom)
+			if err != nil {
+				return err
+			}
 			fmt.Println(bom)
+			bytecount := 0
 			if bom == 0xFFFE {
 				fmt.Println("Little-Endian-Bom 0xFFFE...")
+				runes := []rune{}
+				for {
+					var char uint16 
+					err := binary.Read(file, binary.LittleEndian, &char)
+					if err != nil {
+						return err
+					}
+					bytecount = bytecount + 2
+					if char == 0 {
+						fmt. Printf("Bytecount: %d, Framesize: %d\n", bytecount, frameSize)
+						break
+					}
+					runes = append(runes, utf16.Decode([]uint16{char})...)
+				}
+				fmt.Println(string(runes))
 			} else {
 				fmt.Println("Big-Endian-Bom 0xFEFF...")
 			}
 		}
-		fmt.Printf("Title:", string(frameDatabytes[1:]))
 	default:
 		fmt.Printf("yet unsupported frameId %s\n", frameId)
 	}
@@ -171,10 +207,23 @@ func id3v23bytesizeToUint32(bsize [4]byte) uint32 {
 	return size
 }
 
-func bytesToUint16BE(bs []byte) uint16 {
-	msb := uint16(bs[0]) << 8
-	lsb := uint16(bs[1])
+func bytesToUint16LE(bs [2]byte) uint16 {
+	msb := uint16(bs[0])
+	lsb := uint16(bs[1]) << 8
 	var be uint16
 	be = msb | lsb
 	return be
+}
+
+func readUint16(file *os.File) (uint16, error) {
+	bytes := [2]byte{}
+	var b byte
+	for i:=0;i<2;i++{
+		err := binary.Read(file, binary.BigEndian, &b)
+		if err != nil {
+			return 0, err
+		}
+		bytes[i] = b
+	}
+	return bytesToUint16LE(bytes), nil
 }
