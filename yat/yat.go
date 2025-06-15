@@ -5,10 +5,12 @@ import (
 	"strings"
 	"slices"
 	"path/filepath"
+	"beckx.online/yat/ataglib"
 )
 
 type YatData struct {
 	Files []string
+	AudioMetadatas []*ataglib.AudioMetadata
 }
 
 func NewYatData(args []string) (*YatData, error) {
@@ -20,6 +22,17 @@ func NewYatData(args []string) (*YatData, error) {
 	} else {
 		return yd, nil
 	}
+}
+
+func (yd *YatData) ReadAudioMetadata(tagHeaderOnly bool) error {
+	for _, file := range yd.Files{
+		amd, err := ataglib.NewAudioMetadata(file, tagHeaderOnly)
+		if err != nil {
+			return err
+		}
+		yd.AudioMetadatas = append(yd.AudioMetadatas, amd)
+	}
+	return nil
 }
 
 func getAudiofiles(args []string, pattern []string) ([]string, error) {

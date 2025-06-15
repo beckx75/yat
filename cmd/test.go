@@ -23,7 +23,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("test called")
-		amd, err := tlib.NewAudioAudiometadata("test.mp3")
+		amd, err := tlib.NewAudioMetadata("test.mp3", false)
 		if err != nil {
 			fmt.Println(err)
 			return

@@ -7,7 +7,7 @@ package cmd
 import (
 	"fmt"
 	"beckx.online/yat/yat"
-	"beckx.online/yat/ataglib"
+	// "beckx.online/yat/ataglib"
 	"github.com/spf13/cobra"
 )
 
@@ -23,6 +23,21 @@ var tagtypeCmd = &cobra.Command{
 			panic(err)
 		}
 		fmt.Println("Got files: ", len(yd.Files))
+		err = yd.ReadAudioMetadata(true)
+		if err != nil {
+			panic(err)
+		}
+		ttOccurence := make(map[string]int)
+		for _, amd := range yd.AudioMetadatas {
+			t := amd.TagVersion
+			_, ok := ttOccurence[t]
+			if ok {
+				ttOccurence[t]++
+			} else {
+				ttOccurence[t] = 1
+			}
+		}
+		fmt.Println(ttOccurence)
 	},
 }
 
