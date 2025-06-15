@@ -227,3 +227,7 @@ func readUint16(file *os.File) (uint16, error) {
 	}
 	return bytesToUint16LE(bytes), nil
 }
+
+func readHeader(file *os.File, amd *AudioMetadata) error {
+	return nil
+}

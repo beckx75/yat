@@ -23,6 +23,7 @@ var tagtypeCmd = &cobra.Command{
 			panic(err)
 		}
 		fmt.Println("Got files: ", len(yd.Files))
+		for 
 	},
 }
 
