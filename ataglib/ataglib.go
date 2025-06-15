@@ -4,7 +4,6 @@ import(
 	"fmt"
 	"os"
 	"encoding/binary"
-	"unicode/utf16"
 )
 
 type TagType string
@@ -52,94 +51,89 @@ func NewAudioMetadata(fp string, tagHeaderOnly bool) (*AudioMetadata, error) {
 
 	var bytesread int
 	bytesread, err = readHeader(file, &amd)
-	fmt.Printf("read %d bytes\n", bytesread)
+	if bytesread != 10 {
+		return nil, fmt.Errorf("read bytes for header are not equal to 10: %d",
+			bytesread)
+	}
 	if tagHeaderOnly {
 		return &amd, nil
 	}
-	
+	fmt.Println(amd.TagVersion)
+	switch amd.TagVersion {
+	case "ID3v2.3.0":
+		err = parseID3v23(file)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("sorry, TagVersion %s not supported yet :(\n", amd.TagVersion) 
+	}
 	return &amd, nil
 }
 
-func parseID3v23(file *os.File) error {
+func readHeader(file *os.File, amd *AudioMetadata) (int, error) {
 	var b byte
 	var err error
-
-	// read the first frame...
-	frameId := "" // 4byte
-	for i:=0;i<4;i++ {
+	bytesread := 0
+	tagtype := ""
+	for i:=0;i<=2;i++ {
 		err = binary.Read(file, binary.LittleEndian, &b)
 		if err != nil {
-			return err
+			return bytesread, err
 		}
-		frameId += string(b)
+		bytesread++
+		tagtype += string(b)
 	}
-	fmt.Println(frameId)
-	var frameSize uint32
-	err = binary.Read(file, binary.BigEndian, &frameSize)
-	if err != nil {
-		return err
-	}
-	// frameSize = frameSize - ID3V23_FRAEMHEADER_SIZE
-	fmt.Printf("Framesize: %d\n", frameSize)
-	
-	var frameFlags uint16
-	err = binary.Read(file, binary.BigEndian, &frameFlags)
-	if err != nil {
-		return err
-	}
-	// var frameDatabytes []byte
-	// var i uint32
-	// for i=0;i<frameSize;i++ {
-	// 	err = binary.Read(file, binary.BigEndian, &b)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	frameDatabytes = append(frameDatabytes, b)
-	// }
-	switch frameId {
-	case "TIT2":
-		var encoding byte
-		err = binary.Read(file, binary.BigEndian, &encoding)
+
+	switch tagtype {
+	case "ID3":
+		amd.TagType = ttID3
+		var id3tagVersionMajor uint8 = 2
+		var id3tagVersionMinor uint8 = 0
+ 		var id3tagVersionResvision uint8 = 0
+		
+		err = binary.Read(file, binary.LittleEndian, &id3tagVersionMinor)
 		if err != nil {
-			return err
+			return bytesread, err
 		}
-		fmt.Printf("encoding: 0x%02x\n", encoding)
-		if encoding == teUTF16 {
-			var bom uint16
-			err = binary.Read(file, binary.BigEndian, &bom)
+		fmt.Println(id3tagVersionMinor)
+		bytesread++
+		err = binary.Read(file, binary.LittleEndian, &id3tagVersionResvision)
+		if err != nil {
+			return bytesread, err
+		}
+		bytesread++
+		amd.TagVersion = fmt.Sprintf("%sv%d.%d.%d",
+			string(amd.TagType),
+			id3tagVersionMajor, id3tagVersionMinor, id3tagVersionResvision)
+			
+		// ID3v2 flags             %abc00000
+		err = binary.Read(file, binary.LittleEndian, &amd.TagFlags)
+		if err != nil {
+			return bytesread, err
+		}
+		bytesread++
+		if amd.TagFlags != 0x00 {
+			return bytesread, fmt.Errorf("ID3v23: tags with 'FLAGS' is not supported yet, sorry...")
+		}
+		// ID3v2 size              4 * %0xxxxxxx
+		var rawSize [4]byte
+		for i:=0;i<4;i++ {
+			err = binary.Read(file, binary.BigEndian, &rawSize[i])
 			if err != nil {
-				return err
+				return bytesread, err
 			}
-			fmt.Println(bom)
-			bytecount := 0
-			if bom == 0xFFFE {
-				fmt.Println("Little-Endian-Bom 0xFFFE...")
-				runes := []rune{}
-				for {
-					var char uint16 
-					err := binary.Read(file, binary.LittleEndian, &char)
-					if err != nil {
-						return err
-					}
-					bytecount = bytecount + 2
-					if char == 0 {
-						fmt. Printf("Bytecount: %d, Framesize: %d\n", bytecount, frameSize)
-						break
-					}
-					runes = append(runes, utf16.Decode([]uint16{char})...)
-				}
-				fmt.Println(string(runes))
-			} else {
-				fmt.Println("Big-Endian-Bom 0xFEFF...")
-			}
+			bytesread++
 		}
+		amd.TagSize = id3v23bytesizeToUint32(rawSize) - ID3V23_HEADERSIZE
+
 	default:
-		fmt.Printf("yet unsupported frameId %s\n", frameId)
+		fmt.Println("tag-type not supported yet: ", tagtype)
 	}
-	
-	
-	return nil
+	return bytesread, nil
 }
+
+
 
 func id3v23bytesizeToUint32(bsize [4]byte) uint32 {
 	msb := uint32(bsize[0]) << 21
@@ -173,66 +167,3 @@ func readUint16(file *os.File) (uint16, error) {
 	return bytesToUint16LE(bytes), nil
 }
 
-func readHeader(file *os.File, amd *AudioMetadata) (int, error) {
-	var b byte
-	var err error
-	bytesread := 0
-	tagtype := ""
-	for i:=0;i<=2;i++ {
-		err = binary.Read(file, binary.LittleEndian, &b)
-		if err != nil {
-			return bytesread, err
-		}
-		bytesread++
-		fmt.Printf("%d (0x%02x) - %s\n", b, b, string(b))
-		tagtype += string(b)
-	}
-
-	switch tagtype {
-	case "ID3":
-		amd.TagType = ttID3
-		var id3tagVersionMajor uint8 = 2
-		var id3tagVersionMinor uint8 = 0
- 		var id3tagVersionResvision uint8 = 0
-		
-		fmt.Println("found ID3-Tag")
-		err = binary.Read(file, binary.LittleEndian, &id3tagVersionMinor)
-		if err != nil {
-			return bytesread, err
-		}
-		bytesread++
-		err = binary.Read(file, binary.LittleEndian, &id3tagVersionResvision)
-		if err != nil {
-			return bytesread, err
-		}
-		bytesread++
-			fmt.Printf("found ID3v%d.%d.%d Audio-Metadata...\n",
-				id3tagVersionMajor, id3tagVersionMinor, id3tagVersionResvision)
-		amd.TagVersion = fmt.Sprintf("%sv%d.%d.%d",
-			string(amd.TagType),
-			id3tagVersionMajor, id3tagVersionMinor, id3tagVersionResvision)
-			
-		// ID3v2 flags             %abc00000
-		err = binary.Read(file, binary.LittleEndian, &amd.TagFlags)
-		if err != nil {
-			return bytesread, err
-		}
-		bytesread++
-		if amd.TagFlags != 0x00 {
-			return bytesread, fmt.Errorf("ID3v23: tags with 'FLAGS' is not supported yet, sorry...")
-		}
-		// ID3v2 size              4 * %0xxxxxxx
-		var rawSize [4]byte
-		for i:=0;i<4;i++ {
-			err = binary.Read(file, binary.BigEndian, &rawSize[i])
-			if err != nil {
-				return bytesread, err
-			}
-		}
-		amd.TagSize = id3v23bytesizeToUint32(rawSize) - ID3V23_HEADERSIZE
-
-	default:
-		fmt.Println("tag-type not supported yet: ", tagtype)
-	}
-	return bytesread, nil
-}

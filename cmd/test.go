@@ -7,7 +7,7 @@ package cmd
 import (
 	"fmt"
 
-	tlib "beckx.online/yat/ataglib"
+	"beckx.online/yat/yat"
 	"github.com/spf13/cobra"
 )
 
@@ -22,13 +22,16 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("test called")
-		amd, err := tlib.NewAudioMetadata("test.mp3", false)
+		fmt.Println(args)
+		yd, err := yat.NewYatData(args)
 		if err != nil {
-			fmt.Println(err)
-			return
+			panic(err)
 		}
-		fmt.Println("Amount of TextTags:", len(amd.TextTags))
+		err = yd.ReadAudioMetadata(true)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("got %d AudioMetadata-Content\n", len(yd.AudioMetadatas))
 	},
 }
 

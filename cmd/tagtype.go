@@ -27,17 +27,19 @@ var tagtypeCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		ttOccurence := make(map[string]int)
+		ttOccurence := make(map[string][]string)
 		for _, amd := range yd.AudioMetadatas {
 			t := amd.TagVersion
 			_, ok := ttOccurence[t]
 			if ok {
-				ttOccurence[t]++
+				ttOccurence[t] = append(ttOccurence[t], amd.Filepath)
 			} else {
-				ttOccurence[t] = 1
+				ttOccurence[t] = []string{amd.Filepath}
 			}
 		}
-		fmt.Println(ttOccurence)
+		for tt, fps := range ttOccurence {
+			fmt.Printf("%s: %d\n", tt, len(fps))
+		}
 	},
 }
 
