@@ -58,7 +58,6 @@ func NewAudioMetadata(fp string, tagHeaderOnly bool) (*AudioMetadata, error) {
 	if tagHeaderOnly {
 		return &amd, nil
 	}
-	fmt.Println(amd.TagVersion)
 	switch amd.TagVersion {
 	case "ID3v2.3.0":
 		err = parseID3v23(file)

@@ -25,13 +25,18 @@ to quickly create a Cobra application.`,
 		fmt.Println(args)
 		yd, err := yat.NewYatData(args)
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
+			return
 		}
-		err = yd.ReadAudioMetadata(true)
+		err = yd.ReadAudioMetadata(false)
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
+			return
 		}
 		fmt.Printf("got %d AudioMetadata-Content\n", len(yd.AudioMetadatas))
+		for _, amd := range yd.AudioMetadatas {
+			fmt.Println(amd.TagVersion)
+		}
 	},
 }
 

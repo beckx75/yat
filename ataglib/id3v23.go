@@ -11,6 +11,7 @@ func parseID3v23(file *os.File) error {
 	var b byte
 	var err error
 
+	fmt.Println("ich bin hiiiiier :)")
 	// read the first frame...
 	frameId := "" // 4byte
 	for i:=0;i<4;i++ {
