@@ -45,6 +45,8 @@ func parseID3v23(file *os.File) error {
 	// 	frameDatabytes = append(frameDatabytes, b)
 	// }
 	switch frameId {
+	case "APIC":
+		fmt.Println("found APIC Frame :)")
 	case "TIT2":
 		var encoding byte
 		err = binary.Read(file, binary.BigEndian, &encoding)
@@ -84,7 +86,6 @@ func parseID3v23(file *os.File) error {
 	default:
 		fmt.Printf("yet unsupported frameId %s\n", frameId)
 	}
-	
 	
 	return nil
 }

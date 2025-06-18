@@ -3,6 +3,7 @@ package ataglib
 import(
 	"fmt"
 	"os"
+	"log/slog"
 	"encoding/binary"
 )
 
@@ -27,8 +28,8 @@ const(
 type AudioMetadata struct {
 	Filepath string
 	
-	TagType TagType
-	TagVersion string
+	TagType string // ID3, fLaC, ...
+	TagVersion string // ID3 only
 	TagFlags byte
 	TagSize uint32
 
@@ -65,7 +66,7 @@ func NewAudioMetadata(fp string, tagHeaderOnly bool) (*AudioMetadata, error) {
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("sorry, TagVersion %s not supported yet :(\n", amd.TagVersion) 
+		slog.Warn("sorry, TagVersion not supported yet :(", "Tagversion", amd.TagVersion)
 	}
 	return &amd, nil
 }
