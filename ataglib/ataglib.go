@@ -3,7 +3,7 @@ package ataglib
 import(
 	"fmt"
 	"os"
-	"log/slog"
+	//	"log/slog"
 	"encoding/binary"
 )
 
@@ -49,25 +49,42 @@ func NewAudioMetadata(fp string, tagHeaderOnly bool) (*AudioMetadata, error) {
 	if err != nil {
 		return nil, err
 	}
+	
+	// var bytesread int
 
-	var bytesread int
-	bytesread, err = readHeader(file, &amd)
-	if bytesread != 10 {
-		return nil, fmt.Errorf("read bytes for header are not equal to 10: %d",
-			bytesread)
+	var entryByte byte
+	err = binary.Read(file, binary.BigEndian, &entryByte)
+	if err != nil {
+		return nil, err
 	}
-	if tagHeaderOnly {
-		return &amd, nil
+	switch entryByte{
+		case 0x49:
+		fmt.Println("open ID3")
+		case 0x66:
+		fmt.Println("open flac stream")
+		default:
+		fmt.Println("currently not supported other audio-frame-tag..")
 	}
-	switch amd.TagVersion {
-	case "ID3v2.3.0":
-		err = parseID3v23(file)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		slog.Warn("sorry, TagVersion not supported yet :(", "Tagversion", amd.TagVersion)
-	}
+
+
+	
+	// bytesread, err = readHeader(file, &amd)
+	// if bytesread != 10 {
+	// 	return nil, fmt.Errorf("read bytes for header are not equal to 10: %d",
+	// 		bytesread)
+	// }
+	// if tagHeaderOnly {
+	// 	return &amd, nil
+	// }
+	// switch amd.TagVersion {
+	// case "ID3v2.3.0":
+	// 	err = parseID3v23(file)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// default:
+	// 	slog.Warn("sorry, TagVersion not supported yet :(", "Tagversion", amd.TagVersion)
+	// }
 	return &amd, nil
 }
 
@@ -87,7 +104,7 @@ func readHeader(file *os.File, amd *AudioMetadata) (int, error) {
 
 	switch tagtype {
 	case "ID3":
-		amd.TagType = ttID3
+		amd.TagType = "ttID3"
 		var id3tagVersionMajor uint8 = 2
 		var id3tagVersionMinor uint8 = 0
  		var id3tagVersionResvision uint8 = 0
