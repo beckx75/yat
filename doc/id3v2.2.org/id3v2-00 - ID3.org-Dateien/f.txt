@@ -1,0 +1,35 @@
+var _____WB$wombat$assign$function_____ = function(name) {return (self._wb_wombat && self._wb_wombat.local_init && self._wb_wombat.local_init(name)) || self[name]; };
+if (!self.__WB_pmw) { self.__WB_pmw = function(obj) { this.__WB_source = obj; return this; } }
+{
+  let window = _____WB$wombat$assign$function_____("window");
+  let self = _____WB$wombat$assign$function_____("self");
+  let document = _____WB$wombat$assign$function_____("document");
+  let location = _____WB$wombat$assign$function_____("location");
+  let top = _____WB$wombat$assign$function_____("top");
+  let parent = _____WB$wombat$assign$function_____("parent");
+  let frames = _____WB$wombat$assign$function_____("frames");
+  let opener = _____WB$wombat$assign$function_____("opener");
+
+_gfp_s_({"_cookies_":[{"_value_":"ID=3204dbd57947dc9f:T=1585375088:S=ALNI_MZEUc6J9HdTUKKjHpFH9Yrq4Srr2Q","_expires_":1648447088,"_path_":"/","_domain_":"id3.org"}]});
+
+}
+/*
+     FILE ARCHIVED ON 05:58:08 Mar 28, 2020 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 05:49:44 Nov 03, 2023.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+*/
+/*
+playback timings (ms):
+  captures_list: 148.98
+  exclusion.robots: 0.071
+  exclusion.robots.policy: 0.064
+  cdx.remote: 0.048
+  esindex: 0.007
+  LoadShardBlock: 119.024 (3)
+  PetaboxLoader3.datanode: 46.182 (4)
+  PetaboxLoader3.resolve: 126.528 (3)
+  load_resource: 101.645
+*/

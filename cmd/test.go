@@ -35,7 +35,7 @@ to quickly create a Cobra application.`,
 		}
 		fmt.Printf("got %d AudioMetadata-Content\n", len(yd.AudioMetadatas))
 		for _, amd := range yd.AudioMetadatas {
-			fmt.Println(amd.TagVersion)
+			fmt.Printf("%s (%d)\n",	amd.TagVersion, amd.TagSize)
 		}
 	},
 }
