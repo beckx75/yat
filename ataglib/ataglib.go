@@ -32,11 +32,11 @@ type AudioMetadata struct {
 	TagIdentifier FileIdentifier
 	// ID3 only
 	TagVersion string
-	TagHeaderFlagUnsyncronisation bool
-	TagHeaderFlagExtendedHeader bool
-	TagHeaderFlagExperimentalIndicator bool
+	TagHeaderFlagUnsyncronisation bool // Bit 7
+	TagHeaderFlagExtendedHeader bool // Bit 6
+	TagHeaderFlagExperimentalIndicator bool  // Bit 5
 	// ID3v2.4 only
-	TagHeaderFlagFooterPresent bool
+	TagHeaderFlagFooterPresent bool // Bit 4
 	
 	TagSize uint32
 }

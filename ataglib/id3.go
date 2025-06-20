@@ -5,6 +5,7 @@ import(
 	"os"
 	"encoding/binary"
 	"unicode/utf16"
+	"github.com/rs/zerolog/log"
 )
 
 func (amd *AudioMetadata)parseID3Header(file *os.File, bytesread *uint32) error {
@@ -40,7 +41,25 @@ func (amd *AudioMetadata)parseID3Header(file *os.File, bytesread *uint32) error 
 		amd.TagHeaderFlagExperimentalIndicator = false
 		amd.TagHeaderFlagFooterPresent = false
 	} else {
-		fmt.Println("WARN sorry, Tag-Header Flags for ID3v2-Tags are not supported yet...")
+		if (b & 0x80) == 0x80 {
+			amd.TagHeaderFlagUnsyncronisation = true
+		}
+		if (b & 0x40) == 0x40 {
+			amd.TagHeaderFlagExtendedHeader = true
+			if amd.TagVersion == "ID3v2.4.0" {
+				log.Warn().Msg("Extended Header not supported yet, sorry...")
+			} else {
+				log.Warn().Msg("Extended Header not supported yet, sorry...")
+			}
+		}
+		if (b & 0x20) == 0x20 {
+			amd.TagHeaderFlagExperimentalIndicator = true
+		}
+		if amd.TagVersion == "ID3v2.4.0" {
+			if (b & 0x10) == 0x10 {
+				amd.TagHeaderFlagFooterPresent = true
+			}
+		}
 	}
 
 	// ID3v2 size: 4 * %0xxxxxxx
@@ -152,7 +171,7 @@ func parseTextFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
 	}
 	bytecount++
 	if b > 0x03 {
-		fmt.Println("TagEncoding greater as defined, use 0x01: ", b)
+		log.Error().Msgf("TagEncoding greater as defined, use 0x01: ", b)
 		te = 0x01
 	} else {
 		te = TagEnc(b)
@@ -167,6 +186,7 @@ func parseTextFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
 		}
 		bytecount = bytecount + frameSize - 1
 		val = string(bytes)
+		
 		case TE_UTF16BOM:
 		var bom uint16
 		err = binary.Read(file, binary.BigEndian, &bom)
@@ -191,13 +211,50 @@ func parseTextFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
 			}
 			val = string(runes)
 		} else if bom == 0xFEFF {
-			fmt.Println("Big-Endian-BOM 0xFEFF not supported yet :(")
+			log.Warn().Msg("Big-Endian-BOM 0xFEFF not supported yet :(")
 			return te, "", nil
 		}
 		default:
-		fmt.Println("TextEncoding not supported yet:", te)
+		log.Warn().Msgf("TextEncoding not supported yet:", te)
 		return te, "", nil
 	}
 	return te, val, err
+}
+
+func parseTXXXFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
+	var te TagEnc
+	var desc string
+	var val string
+
+	var b byte
+	var err error
+	var bytecount uint32 = 0
+
+	err = binary.Read(file, binary.LittleEndian, &b)
+	if err != nil {
+		return te, val, err
+	}
+	bytecount++
+	if b > 0x03 {
+		log.Error().Msgf("TagEncoding greater as defined, use 0x01: ", b)
+		te = 0x01
+	} else {
+		te = TagEnc(b)
+	}
+
+	bytes := []byte{}
+	for {
+		err = binary.Read(file, binary.LittleEndian, &b)
+		if err != nil {
+			return te, val, err
+		}
+		bytecount++
+		if b == 0x00 {
+			
+		}
+		bytes = append(bytes, b)
+	}
+	
+	return te, val, nil
 }
 
