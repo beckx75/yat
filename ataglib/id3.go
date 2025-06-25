@@ -223,7 +223,7 @@ func parseTextFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
 
 func parseTXXXFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
 	var te TagEnc
-	var desc string
+	// var desc string
 	var val string
 
 	var b byte

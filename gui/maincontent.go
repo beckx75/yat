@@ -17,8 +17,8 @@ func (ui *UI)makeMaincontent() fyne.CanvasObject {
 
 func (ui *UI) makeFilescontent() fyne.CanvasObject {
 	ui.files.Append("eins")
-	ui.files.Append("eins")
-	ui.files.Append("eins")
+	ui.files.Append("zwei")
+	ui.files.Append("drei")
 	ui.filelist = widget.NewListWithData(ui.files,
 		func() fyne.CanvasObject {
 			return widget.NewLabel("template")
@@ -38,7 +38,7 @@ func (ui *UI) makeFilescontent() fyne.CanvasObject {
 }
 
 func (ui *UI) makeTagcontent() fyne.CanvasObject {
-	things := make([]string, 1000)
+	things := make([]string, 3)
 	for i := range things{
 		things[i] = fmt.Sprintf("%d",i)
 	}
@@ -47,12 +47,18 @@ func (ui *UI) makeTagcontent() fyne.CanvasObject {
 			return len(things)
 		},
 		func() fyne.CanvasObject {
-			return container.NewHBox(widget.NewCheck("template", func(b bool){}), widget.NewLabel("Template Object"))
+			return container.NewHBox(widget.NewCheck("", func(b bool){
+				fmt.Println("ich weiß nicht wo ich bin :(")
+			}), widget.NewLabel("Template Object"))
 		},
 		func(id widget.ListItemID, item fyne.CanvasObject) {
-			fmt.Println(item.(*fyne.Container).Objects[0].(*widget.Check).Checked)
+			fmt.Println("ka leck mich doch", id)
+			// item.(*fyne.Container).Objects[1].(*widget.Label).Text = things[id]
 		},
 	)
+	list.OnSelected = func(id widget.ListItemID) {
+		fmt.Println("selected something...")
+	}
 	
 	
 	return container.NewGridWithColumns(4,
