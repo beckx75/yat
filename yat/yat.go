@@ -1,7 +1,7 @@
 package yat
 
 import (
-	// "fmt"
+	"fmt"
 	"io/fs"
 	"strings"
 	"slices"
@@ -29,9 +29,10 @@ func (yd *YatData) ReadAudioMetadata(tagHeaderOnly bool) error {
 	for _, file := range yd.Files{
 		amd, err := ataglib.NewAudioMetadata(file, tagHeaderOnly)
 		if err != nil {
-			return err
+			fmt.Println(err)
+		} else {
+			yd.AudioMetadatas = append(yd.AudioMetadatas, amd)
 		}
-		yd.AudioMetadatas = append(yd.AudioMetadatas, amd)
 	}
 	return nil
 }

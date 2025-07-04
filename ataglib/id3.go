@@ -117,7 +117,7 @@ func (amd *AudioMetadata)parseID3Frames(file *os.File, bytesread *uint32) error 
 		if err != nil {
 			return err
 		}
-		fmt.Println("Framesize:", frameSize)
+		// fmt.Println("Framesize:", frameSize)
 		*bytesread = *bytesread + 4
 		// fmt.Printf("Framesize: %d\n", frameSize)
 
@@ -131,50 +131,55 @@ func (amd *AudioMetadata)parseID3Frames(file *os.File, bytesread *uint32) error 
 			fmt.Println("FrameFlags not supported yet, sorry...")
 		}
 		if frameId == "TXXX" {
-			te, desc, val, err := parseTXXXFrame(file, frameSize)
+			tf := &TextFrame{
+				OrigFramId: "TXXX",
+			}
+			var err error
+			tf.FrameEnc, tf.Desc, tf.Value, err = parseTXXXFrame(file, frameSize)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("Tag: TXXX -> Desc: %s\t Value: %s (%d)\n", desc, val, te)
+			_, ok := amd.TextFrames[tf.Value]
+			if ok {
+				fmt.Println(amd.String())
+				fmt.Println("---------- NEW TXXX FRAME ---------------")
+				fmt.Printf("Desc: '%s', Value: '%s'\n", tf.Desc, tf.Value)
+				return fmt.Errorf("found TXXX-Frame which is not unique: '%s'", tf.Value)
+			} else {
+				amd.TextFrames[tf.Value] = tf
+			}
+			
+			// fmt.Printf("Tag: TXXX -> Desc: %s\t Value: %s (%d)\n", tf.Desc, tf.Value, tf.FrameEnc)
 			*bytesread = *bytesread + frameSize
 		}else	if frameId[0] == 'T' {
-			te, val, err := parseTextFrame(file, frameSize)
+			tf := &TextFrame{
+				OrigFramId: frameId,
+			}
+			var err error
+			tf.FrameEnc, tf.Value, err = parseTextFrame(file, frameSize)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("Tag: %s -> Value: %s (%d)\n", frameId, val, te)
+			_, ok := amd.TextFrames[tf.OrigFramId]
+			if ok {
+				fmt.Println(amd.String())
+				fmt.Println("---------- NON-UNIQUE FRAME ---------------")
+				fmt.Printf("Frame-ID: '%s', Value: '%s'\n", tf.OrigFramId, tf.Value)
+				return fmt.Errorf("found Frame which is not unique: '%s'", tf.OrigFramId)
+			} else {
+				amd.TextFrames[tf.Value] = tf
+			}
+			// fmt.Printf("Tag: %s -> Value: %s (%d)\n", tf.OrigFramId, tf.Value, tf.FrameEnc)
 			*bytesread = *bytesread + frameSize
 		} else if frameId == "APIC" {
-			fmt.Println(frameId)
-			fmt.Println("Framesize:", frameSize)
-			fmt.Println("Bytea read:",*bytesread)
-			fmt.Println("Sum:", *bytesread + frameSize)
-			fmt.Println("Tagsize:", amd.TagSize)
-			foundT := false
-			foundTX := false
-			var dummy byte
-			for {
-				err = binary.Read(file, binary.LittleEndian, &dummy)
-				if err != nil {
-					return err
-				}
-				*bytesread = *bytesread + 1
-				if (string(dummy) == "T") && (!foundT) {
-					foundT = true
-				}
-				if (string(dummy) == "X") && (foundT) && (!foundTX) {
-					foundTX = true
-				}
-				if (string(dummy) == "X") && (foundT) && (foundTX) {
-					fmt.Println("Bytesread so far:", *bytesread)
-					panic("founc TXX")
-				}
+			if frameSize >= amd.TagSize {
+				return fmt.Errorf("framesize for '%s' out of range; tagsize '%d', framesize '%d'", frameId, amd.TagSize, frameSize)
 			}
 			*bytesread = *bytesread + frameSize
-			var x byte
-			for i:=0; i<10; i++ {
-				_ = binary.Read(file, binary.BigEndian, &x)
-				fmt.Println("Nachlese:", string(x))
+			x := make([]byte, frameSize)
+			err = binary.Read(file, binary.BigEndian, &x)
+			if err != nil {
+				return err
 			}
 		}	else {
 			fmt.Println(frameId, "not supported yet:")
