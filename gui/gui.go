@@ -7,28 +7,37 @@ import(
 	"fyne.io/fyne/v2/widget"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/data/binding"
+	// "fyne.io/fyne/v2/data/binding"
 )
+
+type FileView struct{
+	Name string
+	Path string
+	Selected bool
+}
 
 type UI struct {
 	app fyne.App
 	win fyne.Window
 
 	filelist *widget.List
-	files binding.StringList
+	files []*FileView
 }
 
 func InitGui(args []string) {
 	ui := new(UI)
+	ui.files = []*FileView{}
 	ui.app = app.New()
 	ui.app.Settings().SetTheme(newYatTheme())
 	ui.win = ui.app.NewWindow("this is yat...")
 
-	ui.files = binding.BindStringList(
-		&[]string{},
-	)
+	cntFiles := ui.makeFiles()
+	cntFrames := ui.makeTagcontent()
 
-	maincontent := ui.makeMaincontent()
+	maincontent := container.NewGridWithRows(2,
+		cntFiles, cntFrames,
+	)
+	
 
 	toolbar := widget.NewToolbar(
 		widget.NewToolbarAction(theme.HomeIcon(), func(){fmt.Println("feeling like home...")}),
@@ -44,6 +53,12 @@ func InitGui(args []string) {
 		func(p fyne.Position, uris []fyne.URI){
 			for _, uri := range uris {
 				fmt.Println(uri)
+				fv := &FileView{
+					Name: uri.Name(),
+					Path: uri.Path(),
+					Selected: false,
+				}
+				ui.files = append(ui.files, fv) 
 			}
 		})
 	
