@@ -1,28 +1,31 @@
 package ataglib
 
-import(
+import (
+	"encoding/binary"
 	"fmt"
 	"os"
-	//	"log/slog"
-	"encoding/binary"
+
+	"github.com/rs/zerolog/log"
 )
 
 type FileIdentifier string
+
 const (
-	FI_ID3 FileIdentifier = "ID3"
-	FI_FLAC = "FLAC"
+	FI_ID3  FileIdentifier = "ID3"
+	FI_FLAC                = "FLAC"
 )
 
 type TagEnc byte
+
 const (
-	TE_ISO8152 TagEnc = 0x00 // ID3v2.4 terminated with 0x00
-	TE_UTF16BOM = 0x01  //with BOM -> terminated with 0x00 00
-	TE_UTF16 = 0x02 // wihout BOM -> terminated with 0x00 00
-	TE_UTF8 = 0x03 // ID3v2.4 terminated with 0x00
+	TE_ISO8152  TagEnc = 0x00 // ID3v2.4 terminated with 0x00
+	TE_UTF16BOM        = 0x01 //with BOM -> terminated with 0x00 00
+	TE_UTF16           = 0x02 // wihout BOM -> terminated with 0x00 00
+	TE_UTF8            = 0x03 // ID3v2.4 terminated with 0x00
 )
 
-const(
-	ID3V2_HEADERSIZE uint32 = 10
+const (
+	ID3V2_HEADERSIZE       uint32 = 10
 	ID3V2_FRAMEHEADER_SIZE uint32 = 10
 )
 
@@ -31,28 +34,29 @@ type AudioMetadata struct {
 
 	TagIdentifier FileIdentifier
 	// ID3 only
-	TagVersion string
-	TagHeaderFlagUnsyncronisation bool // Bit 7
-	TagHeaderFlagExtendedHeader bool // Bit 6
-	TagHeaderFlagExperimentalIndicator bool  // Bit 5
+	TagVersion                         string
+	TagHeaderFlagUnsyncronisation      bool // Bit 7
+	TagHeaderFlagExtendedHeader        bool // Bit 6
+	TagHeaderFlagExperimentalIndicator bool // Bit 5
 	// ID3v2.4 only
 	TagHeaderFlagFooterPresent bool // Bit 4
-	
-	TagSize uint32
+
+	TagSize    uint32
 	TextFrames map[string]*TextFrame
 }
 
 type TextFrame struct {
 	OrigFramId string
 	YatFrameId string
-	FrameEnc TagEnc
-	Value string
-	Desc string // for ID3 TXXX-Frames
+	FrameEnc   TagEnc
+	Value      string
+	Desc       string // for ID3 TXXX-Frames
 }
 
 func NewAudioMetadata(fp string, tagHeaderOnly bool) (*AudioMetadata, error) {
+	log.Info().Msg("new AudioMetadata")
 	amd := AudioMetadata{
-		Filepath: fp,
+		Filepath:   fp,
 		TextFrames: make(map[string]*TextFrame),
 	}
 	file, err := os.OpenFile(amd.Filepath, os.O_RDONLY, 0644)
@@ -65,16 +69,16 @@ func NewAudioMetadata(fp string, tagHeaderOnly bool) (*AudioMetadata, error) {
 
 	// first 3 bytes of audiofile (ID3, fLa)
 	var fileIdentifier string
-	for i:=0;i<3;i++ {
+	for i := 0; i < 3; i++ {
 		err = binary.Read(file, binary.BigEndian, &b)
 		if err != nil {
 			return nil, err
 		}
 		fileIdentifier = fmt.Sprintf("%s%s", fileIdentifier, string(b))
 	}
-	bytesread =+ 3
-	switch fileIdentifier{
-		case "ID3":
+	bytesread = +3
+	switch fileIdentifier {
+	case "ID3":
 		amd.TagIdentifier = FI_ID3
 		err = amd.parseID3Header(file, &bytesread)
 		if err != nil {
@@ -88,9 +92,9 @@ func NewAudioMetadata(fp string, tagHeaderOnly bool) (*AudioMetadata, error) {
 		if err != nil {
 			return nil, err
 		}
-		case "fLa":
+	case "fLa":
 		fmt.Println("open flac stream")
-		default:
+	default:
 		fmt.Println("currently not supported other audio-frame-tag:", fileIdentifier)
 	}
 
@@ -115,4 +119,3 @@ func id3v23bytesizeToUint32(bsize [4]byte) uint32 {
 	size = msb | msb2 | lsb2 | lsb
 	return size
 }
-

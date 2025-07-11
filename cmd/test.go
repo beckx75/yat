@@ -1,6 +1,5 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -9,6 +8,8 @@ import (
 
 	"beckx.online/yat/yat"
 	"github.com/spf13/cobra"
+
+	"github.com/rs/zerolog/log"
 )
 
 // testCmd represents the test command
@@ -22,7 +23,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(args)
+		log.Info().Msgf("%v", args)
 		yd, err := yat.NewYatData(args)
 		if err != nil {
 			fmt.Println(err)

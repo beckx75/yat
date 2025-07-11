@@ -1,14 +1,15 @@
 package ataglib
 
-import(
+import (
+	"encoding/binary"
 	"fmt"
 	"os"
-	"encoding/binary"
 	"unicode/utf16"
+
 	"github.com/rs/zerolog/log"
 )
 
-func (amd *AudioMetadata)parseID3Header(file *os.File, bytesread *uint32) error {
+func (amd *AudioMetadata) parseID3Header(file *os.File, bytesread *uint32) error {
 	var b byte
 	var err error
 	var id3tagVersionMajor uint8 = 2
@@ -64,7 +65,7 @@ func (amd *AudioMetadata)parseID3Header(file *os.File, bytesread *uint32) error 
 
 	// ID3v2 size: 4 * %0xxxxxxx
 	var rawSize [4]byte
-	for i :=0;i<4;i++ {
+	for i := 0; i < 4; i++ {
 		err = binary.Read(file, binary.BigEndian, &rawSize[i])
 		if err != nil {
 			return err
@@ -72,15 +73,14 @@ func (amd *AudioMetadata)parseID3Header(file *os.File, bytesread *uint32) error 
 		*bytesread++
 	}
 	amd.TagSize = id3v23bytesizeToUint32(rawSize) - ID3V2_HEADERSIZE
-	fmt.Println("amd.Tagsize befor ID3-Frame parsing:", amd.TagSize)
 
 	return nil
 }
 
-func (amd *AudioMetadata)parseID3Frames(file *os.File, bytesread *uint32) error {
+func (amd *AudioMetadata) parseID3Frames(file *os.File, bytesread *uint32) error {
 	var b byte
 	var err error
-	// for *bytesread < (amd.TagSize - ID3V2_HEADERSIZE) {
+
 	for {
 		// read frameheader 10 byte
 		var frameId string
@@ -88,14 +88,13 @@ func (amd *AudioMetadata)parseID3Frames(file *os.File, bytesread *uint32) error 
 		var frameFlags uint16
 
 		// frameID 4byte
-		for i:=0;i<4;i++ {
+		for i := 0; i < 4; i++ {
 			err = binary.Read(file, binary.LittleEndian, &b)
 			if err != nil {
 				return err
 			}
 			*bytesread++
 			if b == 0x00 {
-				// fmt.Println("starting crazy 0x00 bytes... perhaps padding!?")
 				for b == 0x00 {
 					err = binary.Read(file, binary.LittleEndian, &b)
 					if err != nil {
@@ -110,16 +109,12 @@ func (amd *AudioMetadata)parseID3Frames(file *os.File, bytesread *uint32) error 
 			}
 			frameId += string(b)
 		}
-		// fmt.Println("Frame-ID:", frameId)
-		
-		// frameSize = frameSize - ID3V2_FRAMEHEADER_SIZE
+
 		err = binary.Read(file, binary.BigEndian, &frameSize)
 		if err != nil {
 			return err
 		}
-		// fmt.Println("Framesize:", frameSize)
 		*bytesread = *bytesread + 4
-		// fmt.Printf("Framesize: %d\n", frameSize)
 
 		// FRAME FLAGS 2byte
 		err = binary.Read(file, binary.BigEndian, &frameFlags)
@@ -127,9 +122,13 @@ func (amd *AudioMetadata)parseID3Frames(file *os.File, bytesread *uint32) error 
 			return err
 		}
 		*bytesread = *bytesread + 2
+		log.Debug().Msgf("Frame-Flags: '0x%04x'", frameFlags)
 		if frameFlags != 0x0000 {
-			fmt.Println("FrameFlags not supported yet, sorry...")
+			log.Warn().Msgf("'%v': FrameFlags not supported yet, sorry...", file)
 		}
+		log.Debug().Msgf("Frame-ID: '%s'", frameId)
+		log.Debug().Msgf("Frame-Size: '0x%08x'", frameSize)
+		log.Debug().Msgf(">> Frame-Flags: '0x%04x'", frameFlags)
 		if frameId == "TXXX" {
 			tf := &TextFrame{
 				OrigFramId: "TXXX",
@@ -148,10 +147,10 @@ func (amd *AudioMetadata)parseID3Frames(file *os.File, bytesread *uint32) error 
 			} else {
 				amd.TextFrames[tf.Value] = tf
 			}
-			
+
 			// fmt.Printf("Tag: TXXX -> Desc: %s\t Value: %s (%d)\n", tf.Desc, tf.Value, tf.FrameEnc)
 			*bytesread = *bytesread + frameSize
-		}else	if frameId[0] == 'T' {
+		} else if frameId[0] == 'T' {
 			tf := &TextFrame{
 				OrigFramId: frameId,
 			}
@@ -181,7 +180,7 @@ func (amd *AudioMetadata)parseID3Frames(file *os.File, bytesread *uint32) error 
 			if err != nil {
 				return err
 			}
-		}	else {
+		} else {
 			fmt.Println(frameId, "not supported yet:")
 			dummy := make([]byte, int(frameSize))
 			err = binary.Read(file, binary.LittleEndian, &dummy)
@@ -201,7 +200,7 @@ func parseTextFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
 	var b byte
 	var err error
 	var bytecount uint32 = 0
-	
+
 	err = binary.Read(file, binary.LittleEndian, &b)
 	if err != nil {
 		return te, val, err
@@ -213,18 +212,18 @@ func parseTextFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
 	} else {
 		te = TagEnc(b)
 	}
-	
-	switch te{
-		case TE_ISO8152:
-		bytes := make([]byte, int(frameSize - 1))
+
+	switch te {
+	case TE_ISO8152:
+		bytes := make([]byte, int(frameSize-1))
 		err = binary.Read(file, binary.LittleEndian, &bytes)
 		if err != nil {
 			return te, val, err
 		}
 		bytecount = bytecount + frameSize - 1
 		val = string(bytes)
-		
-		case TE_UTF16BOM:
+
+	case TE_UTF16BOM:
 		var bom uint16
 		err = binary.Read(file, binary.BigEndian, &bom)
 		if err != nil {
@@ -235,7 +234,7 @@ func parseTextFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
 		if bom == 0xFFFE {
 			runes := []rune{}
 			for {
-				var char uint16 
+				var char uint16
 				err := binary.Read(file, binary.LittleEndian, &char)
 				if err != nil {
 					return te, val, err
@@ -251,7 +250,7 @@ func parseTextFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
 			log.Warn().Msg("Big-Endian-BOM 0xFEFF not supported yet :(")
 			return te, "", nil
 		}
-		default:
+	default:
 		log.Warn().Msgf("TextEncoding not supported yet:", te)
 		return te, "", nil
 	}
@@ -297,7 +296,7 @@ func parseTXXXFrame(file *os.File, frameSize uint32) (TagEnc, string, string, er
 			break
 		}
 	}
-	
+
 	// read Value
 	valsize := frameSize - bytecount
 	bval := make([]byte, valsize)
@@ -305,18 +304,18 @@ func parseTXXXFrame(file *os.File, frameSize uint32) (TagEnc, string, string, er
 	if err != nil {
 		return te, val, desc, err
 	}
-	
+
 	val = string(bval)
-	
+
 	return te, val, desc, nil
 }
 
-func parsePRIVFrame(file *os.File, frameSize uint32) ( string, []byte, error) {
+func parsePRIVFrame(file *os.File, frameSize uint32) (string, []byte, error) {
 	// <Header for 'Private frame', ID: "PRIV">
 	// 	Owner identifier        <text string> $00
 	// The private data        <binary data>
 	oid := ""
 	pd := []byte{}
-	
+
 	return oid, pd, nil
 }

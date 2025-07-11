@@ -1,20 +1,22 @@
 package yat
 
 import (
-	"fmt"
 	"io/fs"
-	"strings"
-	"slices"
 	"path/filepath"
+	"slices"
+	"strings"
+
 	"beckx.online/yat/ataglib"
+	"github.com/rs/zerolog/log"
 )
 
 type YatData struct {
-	Files []string
+	Files          []string
 	AudioMetadatas []*ataglib.AudioMetadata
 }
 
 func NewYatData(args []string) (*YatData, error) {
+	log.Info().Msg("creating new YatData...")
 	yd := new(YatData)
 	var err error
 	yd.Files, err = getAudiofiles(args, []string{".mp3"})
@@ -26,10 +28,10 @@ func NewYatData(args []string) (*YatData, error) {
 }
 
 func (yd *YatData) ReadAudioMetadata(tagHeaderOnly bool) error {
-	for _, file := range yd.Files{
+	for _, file := range yd.Files {
 		amd, err := ataglib.NewAudioMetadata(file, tagHeaderOnly)
 		if err != nil {
-			fmt.Println(err)
+			log.Error().Msgf("huh.. somethings wrong with '%s': %s", file, err)
 		} else {
 			yd.AudioMetadatas = append(yd.AudioMetadatas, amd)
 		}
@@ -39,12 +41,12 @@ func (yd *YatData) ReadAudioMetadata(tagHeaderOnly bool) error {
 
 func getAudiofiles(args []string, pattern []string) ([]string, error) {
 	files := []string{}
-	for _, arg := range args{
+	for _, arg := range args {
 		err := filepath.WalkDir(arg, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
-			if d.IsDir(){
+			if d.IsDir() {
 				return nil
 			}
 			ext := strings.ToLower(filepath.Ext(path))
