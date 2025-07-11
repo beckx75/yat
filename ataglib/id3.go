@@ -64,7 +64,7 @@ func (amd *AudioMetadata)parseID3Header(file *os.File, bytesread *uint32) error 
 
 	// ID3v2 size: 4 * %0xxxxxxx
 	var rawSize [4]byte
-	for i:=0;i<4;i++ {
+	for i :=0;i<4;i++ {
 		err = binary.Read(file, binary.BigEndian, &rawSize[i])
 		if err != nil {
 			return err
@@ -192,8 +192,6 @@ func (amd *AudioMetadata)parseID3Frames(file *os.File, bytesread *uint32) error 
 			// fmt.Printf("dummy-length: %d - frameSize: %d\n", len(dummy), frameSize)
 		}
 	}
-	fmt.Println("-------------------------------")
-	return nil
 }
 
 func parseTextFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
@@ -261,6 +259,7 @@ func parseTextFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
 }
 
 func parseTXXXFrame(file *os.File, frameSize uint32) (TagEnc, string, string, error) {
+	log.Info().Msg("parsing TXXX frame")
 	var te TagEnc
 	var desc string
 	var val string

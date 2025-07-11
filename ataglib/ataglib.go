@@ -47,7 +47,7 @@ type TextFrame struct {
 	YatFrameId string
 	FrameEnc TagEnc
 	Value string
-	Desc string // fpr ID3 TXXX-Frames
+	Desc string // for ID3 TXXX-Frames
 }
 
 func NewAudioMetadata(fp string, tagHeaderOnly bool) (*AudioMetadata, error) {
@@ -98,13 +98,11 @@ func NewAudioMetadata(fp string, tagHeaderOnly bool) (*AudioMetadata, error) {
 }
 
 func (amd *AudioMetadata) String() string {
-	s := fmt.Sprintf("AudioMetadata-Content fpr '%s'\n", amd.Filepath)
+	s := fmt.Sprintf("AudioMetadata-Content for '%s'\n", amd.Filepath)
 	s = fmt.Sprintf("%s\tTag-Identifier: %s\n", s, amd.TagIdentifier)
-	s = fmt.Sprintf("%s\t    \n", s)
 	for _, tf := range amd.TextFrames {
 		s = fmt.Sprintf("%s\tFrame-Id: '%s'\t'%s'\n", s, tf.OrigFramId, tf.Value)
 	}
-
 	return s
 }
 
