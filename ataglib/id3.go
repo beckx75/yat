@@ -122,13 +122,13 @@ func (amd *AudioMetadata) parseID3Frames(file *os.File, bytesread *uint32) error
 			return err
 		}
 		*bytesread = *bytesread + 2
-		log.Debug().Msgf("Frame-Flags: '0x%04x'", frameFlags)
+		log.Debug().Msgf("FIRST-->> Frame-Flags: '0x%04x'", frameFlags)
 		if frameFlags != 0x0000 {
 			log.Warn().Msgf("'%v': FrameFlags not supported yet, sorry...", file)
 		}
 		log.Debug().Msgf("Frame-ID: '%s'", frameId)
 		log.Debug().Msgf("Frame-Size: '0x%08x'", frameSize)
-		log.Debug().Msgf(">> Frame-Flags: '0x%04x'", frameFlags)
+		log.Debug().Msgf("SECOND <<-- Frame-Flags: '0x%04x'", frameFlags)
 		if frameId == "TXXX" {
 			tf := &TextFrame{
 				OrigFramId: "TXXX",
@@ -194,18 +194,18 @@ func (amd *AudioMetadata) parseID3Frames(file *os.File, bytesread *uint32) error
 }
 
 func parseTextFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
+	log.Debug().Msgf("Frame-Size Entering parseText-Frame: %d", frameSize)
 	var te TagEnc
 	var val string
 
 	var b byte
 	var err error
-	var bytecount uint32 = 0
 
 	err = binary.Read(file, binary.LittleEndian, &b)
 	if err != nil {
 		return te, val, err
 	}
-	bytecount++
+	frameSize--
 	if b > 0x03 {
 		log.Error().Msgf("TagEncoding greater as defined, use 0x01: ", b)
 		te = 0x01
@@ -213,39 +213,45 @@ func parseTextFrame(file *os.File, frameSize uint32) (TagEnc, string, error) {
 		te = TagEnc(b)
 	}
 
+	log.Debug().Msgf("Frame-Encoding: %v", te)
+
 	switch te {
 	case TE_ISO8152:
-		bytes := make([]byte, int(frameSize-1))
+		bytes := make([]byte, int(frameSize))
 		err = binary.Read(file, binary.LittleEndian, &bytes)
 		if err != nil {
 			return te, val, err
 		}
-		bytecount = bytecount + frameSize - 1
 		val = string(bytes)
-
 	case TE_UTF16BOM:
 		var bom uint16
+		log.Debug().Msg("==========>>> UTF16BOM")
 		err = binary.Read(file, binary.BigEndian, &bom)
 		if err != nil {
 			return te, val, err
 		}
-		frameSize--
+		frameSize = frameSize - 2
 
 		if bom == 0xFFFE {
-			runes := []rune{}
+			log.Debug().Msg("BOM == 0xFFFE")
+			utf16s := []uint16{}
 			for {
 				var char uint16
 				err := binary.Read(file, binary.LittleEndian, &char)
 				if err != nil {
 					return te, val, err
 				}
-				bytecount = bytecount + 2
-				if char == 0x0000 {
+				frameSize = frameSize + 2
+				if (char == 0x0000) || (frameSize == 0) {
+					log.Debug().Msgf("framesize at leaving UTF16: %d", frameSize)
 					break
 				}
-				runes = append(runes, utf16.Decode([]uint16{char})...)
+				log.Debug().Msgf("this i had read: %s", string(utf16.Decode([]uint16{char})))
+				utf16s = append(utf16s, char)
 			}
+			runes := utf16.Decode(utf16s)
 			val = string(runes)
+			log.Info().Msgf("read this UTF16-BOM Value: %s", val)
 		} else if bom == 0xFEFF {
 			log.Warn().Msg("Big-Endian-BOM 0xFEFF not supported yet :(")
 			return te, "", nil
